@@ -1,0 +1,406 @@
+# KELOMPOK 6
+# TUGAS : PROJECT AKHIR
+# TEMA  : SISTEM INFORMASI PENJUALAN KOPI KENANGAN
+# KELAS : SISTEM INFORMASI C
+
+import csv
+import os
+import sys
+import pwinput
+from prettytable import PrettyTable
+from datetime import datetime
+
+def baca_csv(nama_file):
+    data = []
+    try:
+        if os.path.exists(nama_file):
+            with open(nama_file, newline='', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if any(row.values()):
+                        data.append(row)
+    except Exception as e:
+        print(f"Kesalahan membaca {nama_file}: {e}")
+    return data
+
+def tulis_csv(nama_file, data, fieldnames):
+    try:
+        with open(nama_file, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(data)
+    except Exception as e:
+        print(f"Kesalahan menulis {nama_file}: {e}")
+
+def format_rupiah(angka):
+    try:
+        return f"Rp{int(angka):,}".replace(",", ".")
+    except ValueError:
+        return "Rp0"
+
+def inisialisasi_produk():
+    if not os.path.exists("produk.csv"):
+        produk_awal = [
+            {"Kode": "K01", "Nama": "Kopi Kenangan Mantan", "Harga": "18000"},
+            {"Kode": "K02", "Nama": "Kopi Kenangan Latte", "Harga": "20000"},
+            {"Kode": "K03", "Nama": "Es Kopi Hitam Manis", "Harga": "15000"},
+            {"Kode": "K04", "Nama": "Caramel Macchiato", "Harga": "22000"},
+            {"Kode": "K05", "Nama": "Hazelnut Latte", "Harga": "23000"},
+        ]
+        tulis_csv("produk.csv", produk_awal, ["Kode", "Nama", "Harga"])
+
+def inisialisasi_user():
+    if not os.path.exists("user.csv"):
+        user_awal = [
+            {"id": "1", "username": "diara", "password": "3105", "role": "admin", "saldo": "0"},
+            {"id": "2", "username": "yahya", "password": "1304", "role": "kasir", "saldo": "0"},
+            {"id": "3", "username": "dzikri", "password": "1306", "role": "kasir2", "saldo": "0"}
+        ]
+        tulis_csv("user.csv", user_awal, ["id", "username", "password", "role", "saldo"])
+
+def inisialisasi_transaksi():
+    if not os.path.exists("transaksi.csv"):
+        with open("transaksi.csv", "w", newline='', encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=["Tanggal", "Kode", "Nama", "Jumlah", "Total", "User"])
+            writer.writeheader()
+
+def login_user():
+    try:
+        users = baca_csv("user.csv")
+        print("=== LOGIN SISTEM ===")
+        username = input("Username: ").strip()
+        password = pwinput.pwinput("Password: ").strip()
+
+        for u in users:
+            if u["username"] == username and u["password"] == password:
+                print(f"Login berhasil sebagai {u['role'].upper()}!\n")
+                return u
+        print("Login gagal! Username atau password salah.\n")
+        return None
+    except (KeyboardInterrupt, EOFError):
+        print("\nLogin dibatalkan oleh pengguna.\n")
+        return None
+
+def registrasi_user():
+    try:
+        while True:
+            users = baca_csv("user.csv")
+            print("=== REGISTRASI USER BARU ===")
+            username = input("Username baru: ").strip()
+            if not username:
+                print("Username tidak boleh kosong!\n")
+                continue
+            if any(u["username"] == username for u in users):
+                print("Username sudah digunakan!\n")
+                continue
+            password = pwinput.pwinput("Password baru (4 digit): ").strip()
+            if not password.isdigit() or len(password) != 4:
+                print("Password harus 4 digit angka! Registrasi diulang...\n")
+                continue
+            saldo_awal = input("Isi saldo awal (angka, max 200000): ").strip()
+            if not saldo_awal.isdigit():
+                print("Saldo harus angka! Registrasi diulang...\n")
+                continue
+            if int(saldo_awal) > 200000:
+                print("Saldo tidak boleh lebih dari 200000! Registrasi diulang...\n")
+                continue
+
+            user_baru = {
+                "id": str(len(users)+1),
+                "username": username,
+                "password": password,
+                "role": "pelanggan",
+                "saldo": saldo_awal
+            }
+            users.append(user_baru)
+            tulis_csv("user.csv", users, ["id", "username", "password", "role", "saldo"])
+            print("Registrasi berhasil!\n")
+            break
+    except (KeyboardInterrupt, EOFError):
+        print("\nRegistrasi dibatalkan oleh pengguna.\n")
+
+def lihat_produk():
+    try:
+        produk = baca_csv("produk.csv")
+        if not produk:
+            print("Belum ada produk!\n")
+            return
+        tabel = PrettyTable(["Kode", "Nama Kopi", "Harga"])
+        for p in produk:
+            tabel.add_row([p["Kode"], p["Nama"], format_rupiah(p["Harga"])])
+        print(tabel)
+    except (KeyboardInterrupt, EOFError):
+        print("\nDibatalkan pengguna.\n")
+
+def tambah_produk():
+    try:
+        produk = baca_csv("produk.csv")
+        kode = input("Kode kopi: ").strip()
+        nama = input("Nama kopi: ").strip()
+        while True:
+            harga = input("Harga: ").strip()
+            if harga.isdigit():
+                break
+            print("Harga harus angka!")
+        produk.append({"Kode": kode, "Nama": nama, "Harga": harga})
+        tulis_csv("produk.csv", produk, ["Kode", "Nama", "Harga"])
+        print("Produk berhasil ditambahkan!\n")
+    except (KeyboardInterrupt, EOFError):
+        print("\nPenambahan produk dibatalkan.\n")
+
+def ubah_produk():
+    try:
+        produk = baca_csv("produk.csv")
+        lihat_produk()
+        kode = input("Masukkan kode produk yang ingin diubah: ").strip()
+        for p in produk:
+            if p["Kode"] == kode:
+                p["Nama"] = input(f"Nama baru ({p['Nama']}): ").strip() or p["Nama"]
+                while True:
+                    harga_baru = input(f"Harga baru ({p['Harga']}): ").strip() or p["Harga"]
+                    if harga_baru.isdigit():
+                        p["Harga"] = harga_baru
+                        break
+                    print("Harga harus angka!")
+                tulis_csv("produk.csv", produk, ["Kode", "Nama", "Harga"])
+                print("Data produk berhasil diubah!\n")
+                return
+        print("Kode tidak ditemukan!\n")
+    except (KeyboardInterrupt, EOFError):
+        print("\nPerubahan produk dibatalkan.\n")
+
+def hapus_produk():
+    try:
+        produk = baca_csv("produk.csv")
+        lihat_produk()
+        kode = input("Masukkan kode produk yang ingin dihapus: ").strip()
+        produk_baru = [p for p in produk if p["Kode"] != kode]
+        if len(produk_baru) < len(produk):
+            tulis_csv("produk.csv", produk_baru, ["Kode", "Nama", "Harga"])
+            print("Produk berhasil dihapus!\n")
+        else:
+            print("Kode tidak ditemukan!\n")
+    except (KeyboardInterrupt, EOFError):
+        print("\nPenghapusan produk dibatalkan.\n")
+
+def hapus_user():
+    try:
+        users = baca_csv("user.csv")
+        tabel = PrettyTable(["ID", "Username", "Role", "Saldo"])
+        for u in users:
+            tabel.add_row([u["id"], u["username"], u["role"], format_rupiah(u["saldo"])])
+        print(tabel)
+        id_hapus = input("Masukkan ID user yang ingin dihapus: ").strip()
+        if id_hapus == "1":
+            print("Admin tidak bisa dihapus!\n")
+            return
+        users_baru = [u for u in users if u["id"] != id_hapus]
+        if len(users_baru) < len(users):
+            tulis_csv("user.csv", users_baru, ["id", "username", "password", "role", "saldo"])
+            print("User berhasil dihapus!\n")
+        else:
+            print("ID tidak ditemukan!\n")
+    except (KeyboardInterrupt, EOFError):
+        print("\nPenghapusan dibatalkan.\n")
+
+def beli_kopi(user):
+    produk = baca_csv("produk.csv")
+    if not produk:
+        print("Belum ada produk!\n")
+        return
+    lihat_produk()
+    users = baca_csv("user.csv")
+    cart = []
+
+    # Untuk kasir: input nama pelanggan
+    if user["role"] in ["kasir", "kasir2"]:
+        nama_pelanggan = input("Masukkan nama pelanggan: ").strip()
+        if not nama_pelanggan:
+            print("Nama pelanggan tidak boleh kosong!\n")
+            return
+    else:
+        nama_pelanggan = user["username"]
+
+    while True:
+        kode = input("Masukkan kode kopi (atau 'selesai'): ").strip()
+        if kode.lower() == "selesai":
+            break
+        p = next((x for x in produk if x["Kode"] == kode), None)
+        if not p:
+            print("Kode kopi tidak ditemukan!\n")
+            continue
+        try:
+            jumlah = int(input("Jumlah: "))
+            if jumlah <= 0 or jumlah > 10:
+                print("Jumlah harus 1-10!\n")
+                continue
+        except:
+            print("Input jumlah tidak valid!\n")
+            continue
+        cart.append({"Kode": p["Kode"], "Nama": p["Nama"], "Harga": int(p["Harga"]), "Jumlah": jumlah})
+
+    if not cart:
+        print("Transaksi dibatalkan.\n")
+        return
+
+    total_belanja = sum(item["Harga"] * item["Jumlah"] for item in cart)
+
+    if user["role"] in ["kasir", "kasir2"]:
+        print(f"Total harga: {format_rupiah(total_belanja)}")
+        while True:
+            uang_tunai = input(f"Masukkan jumlah uang {nama_pelanggan}: ")
+            if not uang_tunai.isdigit():
+                print("Harus angka!")
+                continue
+            uang_tunai = int(uang_tunai)
+            if uang_tunai < total_belanja:
+                print("Uang tidak cukup!")
+                continue
+            kembalian = uang_tunai - total_belanja
+            print(f"Kembalian: {format_rupiah(kembalian)}")
+            break
+    else:
+        saldo_user = int(user["saldo"])
+        print(f"Total harga: {format_rupiah(total_belanja)}")
+        print(f"Saldo Anda: {format_rupiah(saldo_user)}")
+        if saldo_user < total_belanja:
+            print("Saldo tidak cukup!\n")
+            return
+        user["saldo"] = str(saldo_user - total_belanja)
+        for u in users:
+            if u["username"] == user["username"]:
+                u["saldo"] = user["saldo"]
+                break
+        tulis_csv("user.csv", users, ["id", "username", "password", "role", "saldo"])
+
+    transaksi = baca_csv("transaksi.csv")
+    for item in cart:
+        transaksi.append({
+            "Tanggal": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "Kode": item["Kode"],
+            "Nama": item["Nama"],
+            "Jumlah": item["Jumlah"],
+            "Total": item["Harga"] * item["Jumlah"],
+            "User": nama_pelanggan
+        })
+    tulis_csv("transaksi.csv", transaksi, ["Tanggal", "Kode", "Nama", "Jumlah", "Total", "User"])
+
+    print("\n=== INVOICE PEMBELIAN ===")
+    print(f"Tanggal  : {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"Nama Pelanggan: {nama_pelanggan}")
+    print("----------------------------")
+    for item in cart:
+        print(f"{item['Nama']} x{item['Jumlah']} = {format_rupiah(item['Harga']*item['Jumlah'])}")
+    print("----------------------------")
+    print(f"Total     : {format_rupiah(total_belanja)}")
+    if user["role"] not in ["kasir", "kasir2"]:
+        print(f"Sisa Saldo: {format_rupiah(user['saldo'])}")
+    print("Terima kasih telah berbelanja di Kopi Kenangan!\n")
+
+def laporan_penjualan():
+    transaksi = baca_csv("transaksi.csv")
+    if not transaksi:
+        print("Belum ada transaksi!\n")
+        return
+    tabel = PrettyTable(["Tanggal", "Kode", "Nama Kopi", "Jumlah", "Total", "User"])
+    total_pendapatan = 0
+    for t in transaksi:
+        total_pendapatan += int(t["Total"])
+        tabel.add_row([t["Tanggal"], t["Kode"], t["Nama"], t["Jumlah"], format_rupiah(t["Total"]), t["User"]])
+    print(tabel)
+    print(f"Total Pendapatan: {format_rupiah(total_pendapatan)}\n")
+
+def bukti_transaksi_user(user):
+    transaksi = baca_csv("transaksi.csv")
+    user_transaksi = [t for t in transaksi if t["User"] == user["username"]]
+    if not user_transaksi:
+        print("Belum ada transaksi untuk akun Anda.\n")
+        return
+    tabel = PrettyTable(["Tanggal", "Kode", "Nama Kopi", "Jumlah", "Total"])
+    for t in user_transaksi:
+        tabel.add_row([t["Tanggal"], t["Kode"], t["Nama"], t["Jumlah"], format_rupiah(t["Total"])])
+    print(tabel)
+
+def menu_admin():
+    while True:
+        print("""
+=== MENU ADMIN ===
+1. Lihat Produk
+2. Tambah Produk
+3. Ubah Produk
+4. Hapus Produk
+5. Hapus User
+6. Laporan Penjualan
+7. Logout
+""")
+        pilih = input("Pilih menu: ")
+        if pilih == "1": lihat_produk()
+        elif pilih == "2": tambah_produk()
+        elif pilih == "3": ubah_produk()
+        elif pilih == "4": hapus_produk()
+        elif pilih == "5": hapus_user()
+        elif pilih == "6": laporan_penjualan()
+        elif pilih == "7": break
+        else: print("Pilihan tidak valid!\n")
+
+def menu_kasir(user):
+    while True:
+        print("""
+=== MENU KASIR ===
+1. Lihat Menu Kopi
+2. Beli Kopi (Tunai)
+3. Laporan Penjualan
+4. Keluar
+""")
+        pilih = input("Pilih menu: ")
+        if pilih == "1": lihat_produk()
+        elif pilih == "2": beli_kopi(user)
+        elif pilih == "3": laporan_penjualan()
+        elif pilih == "4": break
+        else: print("Pilihan tidak valid!\n")
+
+def menu_user(user):
+    while True:
+        print(f"""
+=== MENU PELANGGAN ===
+Saldo Anda: {format_rupiah(user['saldo'])}
+1. Lihat Menu Kopi
+2. Beli Kopi
+3. Lihat Bukti Transaksi
+4. Keluar
+""")
+        pilih = input("Pilih menu: ")
+        if pilih == "1": lihat_produk()
+        elif pilih == "2": beli_kopi(user)
+        elif pilih == "3": bukti_transaksi_user(user)
+        elif pilih == "4": break
+        else: print("Pilihan tidak valid!\n")
+
+def main():
+    inisialisasi_produk()
+    inisialisasi_user()
+    inisialisasi_transaksi()
+
+    while True:
+        print("""
+====== SISTEM PENJUALAN KOPI KENANGAN ======
+1. Login
+2. Registrasi
+3. Keluar
+============================================
+""")
+        pilih = input("Pilih menu: ")
+        if pilih == "1":
+            user = login_user()
+            if user:
+                if user["role"] == "admin": menu_admin()
+                elif user["role"] in ["kasir", "kasir2"]: menu_kasir(user)
+                elif user["role"] == "pelanggan": menu_user(user)
+        elif pilih == "2": registrasi_user()
+        elif pilih == "3":
+            print("Terima kasih! Sampai jumpa kembali.")
+            sys.exit()
+        else: print("Pilihan tidak valid.\n")
+
+if __name__ == "__main__":
+    main()
